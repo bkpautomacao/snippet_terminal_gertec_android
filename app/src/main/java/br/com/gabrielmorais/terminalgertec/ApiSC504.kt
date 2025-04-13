@@ -32,6 +32,8 @@ class ApiSC504(
         const val OK = "#ok"
         const val UPDATE_CONFIG = "#updconfig?"
         val productPattern = Regex("""^#.+\|R\$\d+,\d{2}$""")
+        val ID_KEEP_ALIVE: Short = 0x1003
+        val ID_RESP: Short = 0x1014
     }
 
     fun ip() = socket?.inetAddress
@@ -48,13 +50,16 @@ class ApiSC504(
         }
     }
 
-    fun send(message: String) {
+    private val IDW_GET_IDENTIFY: Short = 0x1001
+    val ID_KEEP_ALIVE: Short = 0x1003
+    fun send(message: Short) {
         scope.launch {
             try {
+                val mensagem = montarComando(message, byteArrayOf(0))
                 Log.i("ApiGertec", "Gertec Mensagem Enviada: $message")
                 val b = ByteBuffer.allocate(BUFFER_SIZE)
                 b.order(ByteOrder.LITTLE_ENDIAN)
-                b.put(message.toByteArray())
+                b.put(mensagem)
                 socket?.outputStream?.write(b.array())
             } catch (_: Exception) {
                 reconnect()
@@ -78,9 +83,12 @@ class ApiSC504(
                     val result = socket?.inputStream?.read(buffer) ?: -1
                     if (result < 0) throw IOException("Conexão perdida: leitura retornou $result")
                     val cleanMessage = buffer.filter { it > 0 }.toByteArray()
-                    val message = String(cleanMessage, StandardCharsets.ISO_8859_1)
+                    if (buffer.contains(2)) {
+                        send(ID_KEEP_ALIVE)
+                    }
+                    val message = String(cleanMessage, StandardCharsets.UTF_8)
                     Log.i("ApiGertec", "Gertec: Bytes Recebidos: $result")
-                    Log.i("ApiGertec", "Gertec: Raw Message - ${cleanMessage.toList()}")
+                    Log.i("ApiGertec", "Gertec: Raw Message - ${buffer.toList()}")
                     Log.i("ApiGertec", "Gertec: Mensagem recebida - $message")
                     onMessageReceived(message)
                 }
@@ -93,6 +101,23 @@ class ApiSC504(
     private fun cleanMessage(s: String): String {
         val regex = "[^a-zA-Z0-9.#?$|, ]".toRegex()
         return s.replace(regex, "")
+    }
+
+    fun propertiesList(s: String): List<String> {
+        return s.removePrefix("#").replace("R$", "").split("|")
+    }
+
+    // Monta a mensagem no formato STX + ID + TamArg + Arg
+    private fun montarComando(id: Short, argumento: ByteArray): ByteArray {
+        val buffer = ByteBuffer.allocate(1 + 2 + 4 + argumento.size)
+        buffer.order(ByteOrder.LITTLE_ENDIAN)
+
+        buffer.put(0x02)                       // STX
+        buffer.putShort(id)                    // ID do comando
+        buffer.putInt(argumento.size)          // Tamanho do argumento
+        buffer.put(argumento)                // Argumentos (se houver)
+
+        return buffer.array()
     }
 
     fun close() {
