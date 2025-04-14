@@ -9,8 +9,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.IOException
 import java.net.Socket
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.nio.charset.StandardCharsets
 
 class ApiSC501(
@@ -23,23 +21,24 @@ class ApiSC501(
 
     private var socket: Socket? = null
     private var scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private val TIMEOUT_CONNECTION = 5000
+    private val TIMEOUT_CONNECTION = 10000
     private val DEFAULT_DELAY = 1000L
     private val BUFFER_SIZE = 1024
 
     companion object {
-        const val PRODUCT_NOT_FOUNDED = "#NAO REGISTRADO"
+        const val PRODUCT_NOT_FOUNDED_SERVUNI = "#NAO REGISTRADO"
+        const val PRODUCT_NOT_FOUNDED_TCSERVER = "#nfound"
         const val LIVE = "#live?"
         const val OK = "#ok"
-        val productPattern = Regex("""^#.+\|R\$\d+,\d{2}$""")
+        const val MACADDRESS = "#macaddr?"
+        val productPattern1 = Regex("""^#.+\|R\$\d+,\d{2}$""")
+        val productPattern2 = Regex("""^#.+\|\d+,\d{2} ?$""")
     }
-
-    fun ip() = socket?.inetAddress
 
     fun connect() {
         scope.launch {
             try {
-                socket = Socket(address, port)//.apply { soTimeout = TIMEOUT_CONNECTION }
+                socket = Socket(address, port).apply { soTimeout = TIMEOUT_CONNECTION }
                 onConnected()
                 startReceiving()
             } catch (_: Exception) {
@@ -52,10 +51,7 @@ class ApiSC501(
         scope.launch {
             try {
                 Log.i("ApiGertec", "Gertec Mensagem Enviada: $message")
-                val b = ByteBuffer.allocate(BUFFER_SIZE)
-                b.order(ByteOrder.LITTLE_ENDIAN)
-                b.put(message.toByteArray())
-                socket?.outputStream?.write(b.array())
+                socket?.outputStream?.write(message.toByteArray())
             } catch (_: Exception) {
                 reconnect()
             }
@@ -88,11 +84,6 @@ class ApiSC501(
                 reconnect()
             }
         }
-    }
-
-    private fun cleanMessage(s: String): String {
-        val regex = "[^a-zA-Z0-9.#?$|, ]".toRegex()
-        return s.replace(regex, "")
     }
 
     fun propertiesList(s: String): List<String> {

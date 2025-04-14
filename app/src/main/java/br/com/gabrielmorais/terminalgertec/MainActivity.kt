@@ -16,11 +16,12 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-//        viewModel.connect()
+
         configureViews()
         val tvBarcode = findViewById<TextView>(R.id.tvBarcode)
         val tvDescription = findViewById<TextView>(R.id.tvDescription)
         val tvPrice = findViewById<TextView>(R.id.tvPrice)
+
         viewModel.product.onEach { produto ->
             tvBarcode.text = produto?.ean
             tvDescription.text = produto?.description
@@ -35,15 +36,31 @@ class MainActivity : AppCompatActivity() {
                 tvStatus.background = Color.RED.toDrawable()
             }
         }.launchIn(lifecycleScope)
+
+        val edtIp = findViewById<TextInputEditText>(R.id.edtIp)
+        edtIp.setText("192.168.0.101")
     }
 
     private fun configureViews() {
+
         val btnSearch = findViewById<Button>(R.id.buscaProduto)
         btnSearch.setOnClickListener {
             val edtCodigo = findViewById<TextInputEditText>(R.id.edtCodigo).text
-            val
-                    codigo = "#$edtCodigo"
-//            viewModel.sendMessage(0x1003)
+            val codigo = "#$edtCodigo\u0000"
+            viewModel.sendMessage(codigo)
         }
+
+        val btnConnect = findViewById<Button>(R.id.btnConnect)
+        btnConnect.setOnClickListener {
+            val edtIp = findViewById<TextInputEditText>(R.id.edtIp)
+            val ip = edtIp.text.toString()
+            viewModel.connect(ip)
+        }
+
+        val btnDisconnect = findViewById<Button>(R.id.btnDisconnect)
+        btnDisconnect.setOnClickListener {
+            viewModel.disconnect()
+        }
+
     }
 }
