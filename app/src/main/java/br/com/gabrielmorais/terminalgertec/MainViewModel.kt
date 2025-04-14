@@ -11,7 +11,7 @@ class MainViewModel : ViewModel() {
     private val _product = MutableStateFlow<Produto?>(null)
     val product = _product.asSharedFlow()
 
-    private val _isConnected = MutableStateFlow<Boolean>(false)
+    private val _isConnected = MutableStateFlow(false)
     val isConnected = _isConnected.asSharedFlow()
 
 

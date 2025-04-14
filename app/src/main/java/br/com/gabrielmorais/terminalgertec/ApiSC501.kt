@@ -31,8 +31,8 @@ class ApiSC501(
         const val LIVE = "#live?"
         const val OK = "#ok"
         const val MACADDRESS = "#macaddr?"
-        val productPattern1 = Regex("""^#.+\|R\$\d+,\d{2}$""")
-        val productPattern2 = Regex("""^#.+\|\d+,\d{2} ?$""")
+        val productPattern1 = Regex("""^#.+\|R\$\d+[,.]\d{2}$""")
+        val productPattern2 = Regex("""^#.+\|\d+[,.]\d{2} ?$""")
     }
 
     fun connect() {

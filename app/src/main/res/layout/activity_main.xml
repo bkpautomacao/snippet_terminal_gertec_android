@@ -61,6 +61,8 @@
             android:id="@+id/edtCodigo"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:maxLines="1"
+            android:imeOptions="actionNext"
             android:hint="Digite o código" />
     </com.google.android.material.textfield.TextInputLayout>
 

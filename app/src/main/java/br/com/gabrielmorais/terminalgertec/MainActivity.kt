@@ -2,6 +2,7 @@ package br.com.gabrielmorais.terminalgertec
 
 import android.graphics.Color
 import android.os.Bundle
+import android.view.KeyEvent
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -42,12 +43,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun configureViews() {
+        val edtCodigo = findViewById<TextInputEditText>(R.id.edtCodigo)
+        edtCodigo.setOnKeyListener { view, i, keyEvent ->
+            if (keyEvent.keyCode == KeyEvent.KEYCODE_ENTER && keyEvent.action == KeyEvent.ACTION_DOWN) {
+                buscarProduto()
+                return@setOnKeyListener true
+            }
+            return@setOnKeyListener false
+        }
 
         val btnSearch = findViewById<Button>(R.id.buscaProduto)
         btnSearch.setOnClickListener {
-            val edtCodigo = findViewById<TextInputEditText>(R.id.edtCodigo).text
-            val codigo = "#$edtCodigo\u0000"
-            viewModel.sendMessage(codigo)
+            buscarProduto()
         }
 
         val btnConnect = findViewById<Button>(R.id.btnConnect)
@@ -62,5 +69,12 @@ class MainActivity : AppCompatActivity() {
             viewModel.disconnect()
         }
 
+    }
+
+    private fun buscarProduto() {
+        val edtCodigo = findViewById<TextInputEditText>(R.id.edtCodigo)
+        val codigo = "#${edtCodigo.text}\u0000"
+        viewModel.sendMessage(codigo)
+        edtCodigo.setText("")
     }
 }
