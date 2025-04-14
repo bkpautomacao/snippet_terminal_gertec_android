@@ -14,6 +14,8 @@ class MainViewModel : ViewModel() {
     private val _isConnected = MutableStateFlow(false)
     val isConnected = _isConnected.asSharedFlow()
 
+    private val _linhaProduto = MutableStateFlow("")
+    val linhaProduto = _linhaProduto.asSharedFlow()
 
     private lateinit var apiSC501: ApiSC501
 
@@ -39,6 +41,7 @@ class MainViewModel : ViewModel() {
         when {
             message == ApiSC501.OK -> apiSC501.send("#tc406|4.0\u0000")
             message == ApiSC501.LIVE -> apiSC501.send("#live\u0000")
+            message == ApiSC501.ALWAYS_LIVE -> apiSC501.send("#alwayslive_ok\u0000")
             message.startsWith(ApiSC501.PRODUCT_NOT_FOUNDED_SERVUNI) || message.startsWith(ApiSC501.PRODUCT_NOT_FOUNDED_TCSERVER) -> {
                 val p = Produto(description = "Não encontrado", price = "0")
                 _product.update { p }
@@ -50,16 +53,21 @@ class MainViewModel : ViewModel() {
                 sendMessage(macResponse)
             }
 
-            message.matches(ApiSC501.productPattern1) || message.matches(ApiSC501.productPattern2) -> {
+            message.matches(ApiSC501.productPattern) -> {
                 val produtoString = apiSC501.propertiesList(message)
                 val produto = Produto(
-                    price = produtoString[0],
-                    description = produtoString[1]
+                    description = produtoString[0],
+                    price = produtoString[1],
+                    pricePromotional = produtoString[2]
                 )
+                Log.i("MainViewModel", "Gertec: Produto String $produtoString")
                 _product.update { produto }
             }
 
-            else -> Log.i("MainViewModel", "Gertec: Comando ignorado: $message")
+            else -> {
+                _linhaProduto.update { message }
+                Log.i("MainViewModel", "Gertec: Comando ignorado: $message")
+            }
         }
     }
 

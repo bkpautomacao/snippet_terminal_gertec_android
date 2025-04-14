@@ -19,14 +19,13 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         configureViews()
-        val tvBarcode = findViewById<TextView>(R.id.tvBarcode)
+
         val tvDescription = findViewById<TextView>(R.id.tvDescription)
         val tvPrice = findViewById<TextView>(R.id.tvPrice)
 
         viewModel.product.onEach { produto ->
-            tvBarcode.text = produto?.ean
             tvDescription.text = produto?.description
-            tvPrice.text = produto?.price
+            tvPrice.text = "Preco: ${produto?.price} | Promoção: ${produto?.pricePromotional}"
         }.launchIn(lifecycleScope)
 
         viewModel.isConnected.onEach { isConnected ->
@@ -38,8 +37,13 @@ class MainActivity : AppCompatActivity() {
             }
         }.launchIn(lifecycleScope)
 
+        viewModel.linhaProduto.onEach {
+            val edtlinhaProduto = findViewById<TextView>(R.id.tvBarcode)
+            edtlinhaProduto.text = it
+        }.launchIn(lifecycleScope)
+
         val edtIp = findViewById<TextInputEditText>(R.id.edtIp)
-        edtIp.setText("192.168.0.101")
+        edtIp.setText("182.17.10.149")
     }
 
     private fun configureViews() {

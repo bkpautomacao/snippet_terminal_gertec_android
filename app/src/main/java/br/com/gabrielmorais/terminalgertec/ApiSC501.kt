@@ -29,10 +29,10 @@ class ApiSC501(
         const val PRODUCT_NOT_FOUNDED_SERVUNI = "#NAO REGISTRADO"
         const val PRODUCT_NOT_FOUNDED_TCSERVER = "#nfound"
         const val LIVE = "#live?"
+        const val ALWAYS_LIVE = "#alwayslive"
         const val OK = "#ok"
         const val MACADDRESS = "#macaddr?"
-        val productPattern1 = Regex("""^#.+\|R\$\d+[,.]\d{2}$""")
-        val productPattern2 = Regex("""^#.+\|\d+[,.]\d{2} ?$""")
+        val productPattern = Regex("""^#([ -~]{1,80})\|([ -~]{1,20})$""")
     }
 
     fun connect() {
@@ -87,7 +87,10 @@ class ApiSC501(
     }
 
     fun propertiesList(s: String): List<String> {
-        return s.removePrefix("#").replace("R$", "").split("|")
+        val cleanString = s.removePrefix("#")
+        val (description, price) = cleanString.split("|")
+        val priceList = price.replace("R$", "").trimStart().split(" ")
+        return listOf(description) + priceList
     }
 
     fun close() {
