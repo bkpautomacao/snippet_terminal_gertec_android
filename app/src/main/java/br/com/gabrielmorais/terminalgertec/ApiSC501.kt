@@ -13,7 +13,7 @@ import java.nio.charset.StandardCharsets
 
 class ApiSC501(
     private val address: String,
-    private val port: Int = 6500,
+    private val port: Int = 1007,
     private val onMessageReceived: (String) -> Unit,
     private val onConnected: () -> Unit,
     private val onDisconnected: () -> Unit
@@ -21,19 +21,9 @@ class ApiSC501(
 
     private var socket: Socket? = null
     private var scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private val TIMEOUT_CONNECTION = 10000
-    private val DEFAULT_DELAY = 1000L
+    private val TIMEOUT_CONNECTION = 5000
+    private val DEFAULT_DELAY = 300L
     private val BUFFER_SIZE = 1024
-
-    companion object {
-        const val PRODUCT_NOT_FOUNDED_SERVUNI = "#NAO REGISTRADO"
-        const val PRODUCT_NOT_FOUNDED_TCSERVER = "#nfound"
-        const val LIVE = "#live?"
-        const val ALWAYS_LIVE = "#alwayslive"
-        const val OK = "#ok"
-        const val MACADDRESS = "#macaddr?"
-        val productPattern = Regex("""^#([ -~]{1,80})\|([ -~]{1,20})$""")
-    }
 
     fun connect() {
         scope.launch {
@@ -84,13 +74,6 @@ class ApiSC501(
                 reconnect()
             }
         }
-    }
-
-    fun propertiesList(s: String): List<String> {
-        val cleanString = s.removePrefix("#")
-        val (description, price) = cleanString.split("|")
-        val priceList = price.replace("R$", "").trimStart().split(" ")
-        return listOf(description) + priceList
     }
 
     fun close() {

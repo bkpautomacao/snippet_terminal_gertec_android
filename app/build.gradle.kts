@@ -11,9 +11,9 @@ android {
         applicationId = "br.com.gabrielmorais.terminalgertec"
         minSdk = 24
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.1"
-
+        versionCode = 5
+        versionName = "1.4"
+        setProperty("archivesBaseName", "AppTesteGertec_v${versionName}_${versionCode}")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -44,6 +44,8 @@ dependencies {
     implementation(libs.kotlin.coroutines)
     implementation(libs.androidx.lifecycle.viewmodel)
     implementation(libs.androidx.constraintlayout)
+    implementation(libs.koin.android)
+    implementation(libs.usb.serial)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

@@ -2,22 +2,42 @@ package br.com.gabrielmorais.terminalgertec
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
+import com.hoho.android.usbserial.driver.UsbSerialPort
+import com.hoho.android.usbserial.util.SerialInputOutputManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import java.nio.charset.StandardCharsets
 
-class MainViewModel : ViewModel() {
+class MainViewModel(
+    private val usbSerial: UsbSerial
+) : ViewModel(), SerialInputOutputManager.Listener {
 
     private val _product = MutableStateFlow<Produto?>(null)
     val product = _product.asSharedFlow()
 
     private val _isConnected = MutableStateFlow(false)
     val isConnected = _isConnected.asSharedFlow()
+    private val _message = MutableStateFlow("")
+    val message = _message.asStateFlow()
 
     private val _linhaProduto = MutableStateFlow("")
     val linhaProduto = _linhaProduto.asSharedFlow()
-
+    private lateinit var usbSerialPort: UsbSerialPort
     private lateinit var apiSC501: ApiSC501
+
+    fun startSerialScanner() {
+        try {
+            val driver = usbSerial.getAvailableDevice()
+            usbSerialPort = usbSerial.openPortConnection(driver)
+            val usbIoManager = SerialInputOutputManager(usbSerialPort, this)
+            usbIoManager.start()
+            Log.i("MainViewModel", "startSerialScanner: Iniciando scanner")
+        } catch (e: Exception) {
+            _message.update { "Ocorreu um erro ao iniciar o scanner: ${e.message}" }
+        }
+    }
 
     fun connect(ip: String) {
         apiSC501 = ApiSC501(
@@ -30,44 +50,30 @@ class MainViewModel : ViewModel() {
                 _isConnected.update { false }
                 Log.i("MainViewModel", "Gertec: Terminal desconectado")
             },
-            onMessageReceived = ::handleGertecMessage
+            onMessageReceived = ::handleQuickWayMessage
         )
         apiSC501.connect()
     }
 
 
-    private fun handleGertecMessage(message: String) {
-
+    private fun handleQuickWayMessage(message: String) {
         when {
-            message == ApiSC501.OK -> apiSC501.send("#tc406|4.0\u0000")
-            message == ApiSC501.LIVE -> apiSC501.send("#live\u0000")
-            message == ApiSC501.ALWAYS_LIVE -> apiSC501.send("#alwayslive_ok\u0000")
-            message.startsWith(ApiSC501.PRODUCT_NOT_FOUNDED_SERVUNI) || message.startsWith(ApiSC501.PRODUCT_NOT_FOUNDED_TCSERVER) -> {
-                val p = Produto(description = "Não encontrado", price = "0")
-                _product.update { p }
-                Log.i("MainViewModel", "Gertec: Produto não encontrado")
+            message.startsWith("L") -> {
+                val result = message.removePrefix("L")
+                val regex = Regex("""\b\d{1,3}(?:\.\d{3})*,\d{2}\b""")
+                val match = regex.find(result)
+                if (match != null) {
+                    var clean = result.replace("\n", "")
+                    clean = clean.replace(Regex("\\s{2,}"), " ")
+                    _linhaProduto.update { clean }
+                } else {
+                    _linhaProduto.update { result }
+                }
+
+                apiSC501.send("1")
             }
 
-            message.startsWith(ApiSC501.MACADDRESS) -> {
-                val macResponse = "#macaddr+00:00:00:00:00:00"
-                sendMessage(macResponse)
-            }
-
-            message.matches(ApiSC501.productPattern) -> {
-                val produtoString = apiSC501.propertiesList(message)
-                val produto = Produto(
-                    description = produtoString[0],
-                    price = produtoString[1],
-                    pricePromotional = produtoString[2]
-                )
-                Log.i("MainViewModel", "Gertec: Produto String $produtoString")
-                _product.update { produto }
-            }
-
-            else -> {
-                _linhaProduto.update { message }
-                Log.i("MainViewModel", "Gertec: Comando ignorado: $message")
-            }
+            else -> apiSC501.send("1")
         }
     }
 
@@ -80,6 +86,23 @@ class MainViewModel : ViewModel() {
     override fun onCleared() {
         super.onCleared()
         apiSC501.close()
+        usbSerial.closePortConnection(usbSerialPort)
+    }
+
+    override fun onNewData(data: ByteArray?) {
+        Log.i("MainViewModel", "onNewData: $data")
+        if (data != null) {
+            val stringData = String(data, StandardCharsets.ISO_8859_1)
+            val newData = "2$stringData"
+            Log.i("MainViewModel", "onNewData: Buscando item: $newData")
+            if (this::apiSC501.isInitialized) {
+                apiSC501.send(newData)
+            }
+        }
+    }
+
+    override fun onRunError(e: Exception?) {
+        Log.i("MainViewModel", "erro: ${e?.message}")
     }
 
 }
