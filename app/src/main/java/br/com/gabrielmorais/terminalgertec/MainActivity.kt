@@ -5,26 +5,25 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.graphics.Color
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.os.Build
 import android.os.Bundle
+import android.speech.tts.TextToSpeech
 import android.util.Log
-import android.view.KeyEvent
-import android.widget.Button
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.graphics.drawable.toDrawable
 import androidx.lifecycle.lifecycleScope
-import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.koin.androidx.viewmodel.ext.android.viewModel
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
+  private lateinit var tts: TextToSpeech
   private val viewModel by viewModel<MainViewModel>()
   private val ACTION_USB_PERMISSION = "br.com.gabrielmorais.terminalgertec.USB_PERMISSION"
   private val USB_PERMISSION_REQUEST_CODE = 562
@@ -32,6 +31,8 @@ class MainActivity : AppCompatActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_main)
+    configureTTS()
+    UiUtils.hideSystemUi(window)
 
     val filter = IntentFilter(ACTION_USB_PERMISSION)
     if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.O) {
@@ -39,24 +40,44 @@ class MainActivity : AppCompatActivity() {
     } else {
       registerReceiver(usbReceiver, filter, RECEIVER_EXPORTED)
     }
-
+    viewModel.connect("182.17.10.245")
     requestUsbPermission()
-    val edtIp = findViewById<TextInputEditText>(R.id.edtIp)
-    edtIp.setText("182.17.10.245")
-
-    configureViews()
     handleObserver()
+  }
+
+  private fun configureTTS() {
+    tts = TextToSpeech(applicationContext) { result ->
+      if (result == TextToSpeech.SUCCESS) {
+        val language = tts.setLanguage(Locale("pt", "BR"))
+        if (language == TextToSpeech.LANG_MISSING_DATA || language == TextToSpeech.LANG_NOT_SUPPORTED) {
+          Log.i("MainActivity", "configureAdapter: Linguagem não suportada")
+        }
+      }
+    }
   }
 
   private fun requestUsbPermission() {
     val usbManager = getSystemService(USB_SERVICE) as UsbManager
     val devices = usbManager.deviceList.values
     if (devices.isEmpty()) {
+      Log.i("MainActivity", "requestUsbPermission: Nenhum dispositivo usb encontrado")
       return
     }
 
-    val device = devices.elementAt(0)
+    devices.forEach { device ->
+      Log.i("MainActivity", "requestUsbPermission: ${device.productName}")
+    }
 
+    val usbDevices = devices.filter { device ->
+      device.productName?.contains("usb2.0-ser", ignoreCase = true) ?: false
+    }
+
+    if (usbDevices.isEmpty()) {
+      Log.i("MainActivity", "requestUsbPermission: Nenhum scanner usb encontrado")
+      return
+    }
+
+    val device = usbDevices[0]
     val permissionIntent = PendingIntent.getBroadcast(
       this,
       USB_PERMISSION_REQUEST_CODE,
@@ -86,7 +107,7 @@ class MainActivity : AppCompatActivity() {
           if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
             Log.d(
               "MainActivity",
-              "Permissão concedida para o dispositivo: ${device?.deviceName}"
+              "Permissão concedida para o dispositivo: ${device?.productName}"
             )
             viewModel.startSerialScanner()
           } else {
@@ -103,19 +124,14 @@ class MainActivity : AppCompatActivity() {
         .show()
     }.launchIn(lifecycleScope)
     viewModel.isConnected.onEach { isConnected ->
-      val tvStatus = findViewById<TextView>(R.id.status)
+      val tvStatus = findViewById<ImageView>(R.id.status)
       if (isConnected) {
-        tvStatus.background = Color.GREEN.toDrawable()
+        Log.i("MainActivity", "Terminal Status: Conectado")
+        tvStatus.setImageResource(R.drawable.icon_connected)
       } else {
-        tvStatus.background = Color.RED.toDrawable()
+        Log.i("MainActivity", "Terminal Status: Desconectado")
+        tvStatus.setImageResource(R.drawable.icon_disconnected)
       }
-    }.launchIn(lifecycleScope)
-
-    viewModel.product.onEach { produto ->
-      val tvDescription = findViewById<TextView>(R.id.tvDescription)
-      val tvPrice = findViewById<TextView>(R.id.tvPrice)
-      tvDescription.text = produto?.description
-      tvPrice.text = "Preco: ${produto?.price} | Promoção: ${produto?.pricePromotional}"
     }.launchIn(lifecycleScope)
 
     viewModel.linhaProduto.onEach {
@@ -123,41 +139,12 @@ class MainActivity : AppCompatActivity() {
       edtlinhaProduto.text = it
     }.launchIn(lifecycleScope)
 
-  }
+    viewModel.product.onEach {
+      val params = Bundle()
+      params.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 0.9F)
+      tts.setSpeechRate(1.3F)
+      tts.speak(it?.price, TextToSpeech.QUEUE_ADD, params, null)
+    }.launchIn(lifecycleScope)
 
-  private fun configureViews() {
-    val edtCodigo = findViewById<TextInputEditText>(R.id.edtCodigo)
-    edtCodigo.setOnKeyListener { view, i, keyEvent ->
-      if (keyEvent.keyCode == KeyEvent.KEYCODE_ENTER && keyEvent.action == KeyEvent.ACTION_DOWN) {
-        buscarProduto()
-        return@setOnKeyListener true
-      }
-      return@setOnKeyListener false
-    }
-
-    val btnSearch = findViewById<Button>(R.id.buscaProduto)
-    btnSearch.setOnClickListener {
-      buscarProduto()
-    }
-
-    val btnConnect = findViewById<Button>(R.id.btnConnect)
-    btnConnect.setOnClickListener {
-      val edtIp = findViewById<TextInputEditText>(R.id.edtIp)
-      val ip = edtIp.text.toString()
-      viewModel.connect(ip)
-    }
-
-    val btnDisconnect = findViewById<Button>(R.id.btnDisconnect)
-    btnDisconnect.setOnClickListener {
-      viewModel.disconnect()
-    }
-
-  }
-
-  private fun buscarProduto() {
-    val edtCodigo = findViewById<TextInputEditText>(R.id.edtCodigo)
-    val codigo = "2${edtCodigo.text}"
-    viewModel.sendMessage(codigo)
-    edtCodigo.setText("")
   }
 }

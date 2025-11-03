@@ -31,7 +31,8 @@ class ApiQWChecker(
         socket = Socket(address, port).apply { soTimeout = TIMEOUT_CONNECTION }
         onConnected()
         startReceiving()
-      } catch (_: Exception) {
+      } catch (e: Exception) {
+        Log.i("ApiQWChecker", "connect: ${e.message}")
         reconnect()
       }
     }
@@ -42,7 +43,8 @@ class ApiQWChecker(
       try {
         Log.i("ApiGertec", "Gertec Mensagem Enviada: $message")
         socket?.outputStream?.write(message.toByteArray())
-      } catch (_: Exception) {
+      } catch (e: Exception) {
+        Log.i("ApiQWChecker", "connect: ${e.message}")
         reconnect()
       }
     }
@@ -70,7 +72,8 @@ class ApiQWChecker(
           Log.i("ApiGertec", "Gertec: Mensagem recebida - $message")
           onMessageReceived(message)
         }
-      } catch (_: Exception) {
+      } catch (e: Exception) {
+        Log.i("ApiQWChecker", "connect: ${e.message}")
         reconnect()
       }
     }

@@ -1,7 +1,6 @@
 package br.com.gabrielmorais.terminalgertec
 
 import android.hardware.usb.UsbManager
-import android.util.Log
 import br.com.gabrielmorais.terminalgertec.exceptions.UsbConnectionException
 import br.com.gabrielmorais.terminalgertec.exceptions.UsbNotFoundException
 import com.hoho.android.usbserial.driver.UsbSerialDriver
@@ -11,7 +10,6 @@ import com.hoho.android.usbserial.driver.UsbSerialProber
 class UsbSerial(
     private val usbManager: UsbManager
 ) {
-
     fun getAvailableDevice(): UsbSerialDriver {
         val availableDrivers: MutableList<UsbSerialDriver?> = UsbSerialProber
             .getDefaultProber()
@@ -21,7 +19,6 @@ class UsbSerial(
             throw UsbNotFoundException("Nenhum dispositivo usb encontrado")
         }
 
-        Log.i("UsbSerial", "getAvailableDevice: ${availableDrivers[0]?.device}")
         val usbDriver = availableDrivers[0]
         if (usbDriver == null) {
             throw UsbNotFoundException("Nenhum dispositivo usb encontrado")
