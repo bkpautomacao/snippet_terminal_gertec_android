@@ -2,6 +2,7 @@ package br.com.gabrielmorais.terminalgertec
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
+import br.com.gabrielmorais.terminalgertec.http.source.repository.AppConfigRepository
 import com.hoho.android.usbserial.driver.UsbSerialPort
 import com.hoho.android.usbserial.util.SerialInputOutputManager
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,7 +12,8 @@ import kotlinx.coroutines.flow.update
 import java.nio.charset.StandardCharsets
 
 class MainViewModel(
-    private val usbSerial: UsbSerial
+    private val usbSerial: UsbSerial,
+    private val repository: AppConfigRepository
 ) : ViewModel(), SerialInputOutputManager.Listener {
 
     private val _product = MutableStateFlow<Produto?>(null)
@@ -25,7 +27,7 @@ class MainViewModel(
     private val _linhaProduto = MutableStateFlow("")
     val linhaProduto = _linhaProduto.asSharedFlow()
     private lateinit var usbSerialPort: UsbSerialPort
-    private lateinit var apiSC501: ApiSC501
+    private lateinit var apiQWChecker: ApiQWChecker
 
     fun startSerialScanner() {
         try {
@@ -40,7 +42,7 @@ class MainViewModel(
     }
 
     fun connect(ip: String) {
-        apiSC501 = ApiSC501(
+        apiQWChecker = ApiQWChecker(
             address = ip,
             onConnected = {
                 _isConnected.update { true }
@@ -52,7 +54,7 @@ class MainViewModel(
             },
             onMessageReceived = ::handleQuickWayMessage
         )
-        apiSC501.connect()
+        apiQWChecker.connect()
     }
 
 
@@ -70,22 +72,22 @@ class MainViewModel(
                     _linhaProduto.update { result }
                 }
 
-                apiSC501.send("1")
+                apiQWChecker.send("1")
             }
 
-            else -> apiSC501.send("1")
+            else -> apiQWChecker.send("1")
         }
     }
 
     fun disconnect() {
-        apiSC501.close()
+        apiQWChecker.close()
     }
 
-    fun sendMessage(message: String) = apiSC501.send(message)
+    fun sendMessage(message: String) = apiQWChecker.send(message)
 
     override fun onCleared() {
         super.onCleared()
-        apiSC501.close()
+        apiQWChecker.close()
         usbSerial.closePortConnection(usbSerialPort)
     }
 
@@ -95,8 +97,8 @@ class MainViewModel(
             val stringData = String(data, StandardCharsets.ISO_8859_1)
             val newData = "2$stringData"
             Log.i("MainViewModel", "onNewData: Buscando item: $newData")
-            if (this::apiSC501.isInitialized) {
-                apiSC501.send(newData)
+            if (this::apiQWChecker.isInitialized) {
+                apiQWChecker.send(newData)
             }
         }
     }
