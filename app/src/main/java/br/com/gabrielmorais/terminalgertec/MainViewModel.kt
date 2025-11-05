@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import br.com.gabrielmorais.terminalgertec.http.source.repository.AppConfigRepository
 import com.hoho.android.usbserial.driver.UsbSerialPort
 import com.hoho.android.usbserial.util.SerialInputOutputManager
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,14 +19,14 @@ class MainViewModel(
   private val repository: AppConfigRepository
 ) : ViewModel(), SerialInputOutputManager.Listener {
 
-  private val _product = MutableStateFlow<Produto?>(null)
+  private val _product = MutableSharedFlow<Produto?>()
   val product = _product.asSharedFlow()
   private val _isConnected = MutableStateFlow(false)
   val isConnected = _isConnected.asSharedFlow()
   private val _message = MutableStateFlow("")
   val message = _message.asStateFlow()
   private val _linhaProduto = MutableStateFlow("")
-  val linhaProduto = _linhaProduto.asSharedFlow()
+  val terminalMessages = _linhaProduto.asSharedFlow()
 
   private lateinit var usbSerialPort: UsbSerialPort
   private lateinit var apiQWChecker: ApiQWChecker
@@ -64,31 +65,37 @@ class MainViewModel(
     apiQWChecker.connect()
   }
 
-  private fun handleQuickWayMessage(message: String) {
+  private suspend fun handleQuickWayMessage(message: String) {
     when {
       message.startsWith("L") -> {
         val result = message.removePrefix("L")
         val regex = Regex("""\b\d{1,3}(?:\.\d{3})*,\d{2}\b""")
         val match = regex.find(result)
+        Log.i("MainViewModel", "handleQuickWayMessage: $result | Match: $match")
         if (match != null) {
           var clean = result.replace("\n", "")
           clean = clean.replace(Regex("\\s{2,}"), " ")
-          val wordsList = clean.split(" ")
+          val wordsList = clean.split(" ").filter { it.isNotBlank() }
           val priceIndex = wordsList.size - 1
           val price = wordsList[priceIndex]
 
           val description = wordsList
             .subList(0, priceIndex)
-            .joinToString { " " }
+            .joinToString(separator = " ")
 
           val priceFormatted = formatPortugueseCurrency(price)
           val produto = Produto(
             price = priceFormatted,
             description = description
           )
-          _product.update { produto }
-          _linhaProduto.update { clean }
+
+          _product.emit(produto)
+
         } else {
+          val cleaned = result.split("\n")
+            .filter { it.isNotBlank() }
+            .map { it.trim() }
+          Log.i("MainViewModel", "handleQuickWayMessage: $cleaned")
           _linhaProduto.update { result }
         }
 
@@ -103,11 +110,13 @@ class MainViewModel(
     val formatter = NumberFormat.getCurrencyInstance(Locale("pt", "BR"))
     return formatter.format(value?.replace(",", ".")?.toDouble())
   }
-  
+
   override fun onCleared() {
     super.onCleared()
     apiQWChecker.close()
-    usbSerial.closePortConnection(usbSerialPort)
+    if (this::usbSerialPort.isInitialized) {
+      usbSerial.closePortConnection(usbSerialPort)
+    }
   }
 
   override fun onNewData(data: ByteArray?) {

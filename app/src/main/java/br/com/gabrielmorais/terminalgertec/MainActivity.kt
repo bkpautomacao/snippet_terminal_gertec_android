@@ -17,6 +17,7 @@ import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import br.com.gabrielmorais.terminalgertec.http.HttpServerManager
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -43,6 +44,16 @@ class MainActivity : AppCompatActivity() {
     viewModel.connect("182.17.10.245")
     requestUsbPermission()
     handleObserver()
+  }
+
+  override fun onStart() {
+    super.onStart()
+    HttpServerManager.start(this)
+  }
+
+  override fun onStop() {
+    super.onStop()
+    HttpServerManager.stop()
   }
 
   private fun configureTTS() {
@@ -134,16 +145,24 @@ class MainActivity : AppCompatActivity() {
       }
     }.launchIn(lifecycleScope)
 
-    viewModel.linhaProduto.onEach {
-      val edtlinhaProduto = findViewById<TextView>(R.id.tvBarcode)
-      edtlinhaProduto.text = it
+    viewModel.terminalMessages.onEach {
+      val edtProduto = findViewById<TextView>(R.id.tvProduto)
+      val edtTerminalMessages = findViewById<TextView>(R.id.tv_terminal_messages)
+      edtProduto.text = ""
+      edtTerminalMessages.text = it
     }.launchIn(lifecycleScope)
 
-    viewModel.product.onEach {
-      val params = Bundle()
-      params.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 0.9F)
-      tts.setSpeechRate(1.3F)
-      tts.speak(it?.price, TextToSpeech.QUEUE_ADD, params, null)
+    viewModel.product.onEach { product ->
+      if (product != null) {
+        val edtProduto = findViewById<TextView>(R.id.tvProduto)
+        val edtTerminalMessages = findViewById<TextView>(R.id.tv_terminal_messages)
+        edtTerminalMessages.text = ""
+        edtProduto.text = "${product.description}\n${product.price}"
+        val params = Bundle()
+        params.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 0.9F)
+        tts.setSpeechRate(1.3F)
+        tts.speak(product.price, TextToSpeech.QUEUE_ADD, params, null)
+      }
     }.launchIn(lifecycleScope)
 
   }

@@ -14,7 +14,7 @@ import java.nio.charset.StandardCharsets
 class ApiQWChecker(
   private val address: String,
   private val port: Int = 1007,
-  private val onMessageReceived: (String) -> Unit,
+  private val onMessageReceived: suspend (String) -> Unit,
   private val onConnected: () -> Unit,
   private val onDisconnected: () -> Unit
 ) {

@@ -14,7 +14,6 @@ android {
         targetSdk = 35
         versionCode = 5
         versionName = "1.4"
-        setProperty("archivesBaseName", "AppTesteGertec_v${versionName}_${versionCode}")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
