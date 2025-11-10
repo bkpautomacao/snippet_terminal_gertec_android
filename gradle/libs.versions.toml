@@ -31,6 +31,7 @@ kotlin-coroutines = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutine
 androidx-lifecycle-viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycle-viewmodel-version" }
 usb-serial = { group = "com.github.mik3y", name = "usb-serial-for-android", version.ref = "usbSerialVersion" }
 koin-android = { group = "io.insert-koin", name = "koin-android", version.ref = "koinVersion" }
+koin-ktor = { group = "io.insert-koin", name = "koin-ktor", version.ref = "koinVersion" }
 ktor-server-core = {group= "io.ktor",name = "ktor-server-core", version.ref = "ktorVersion"}
 ktor-server-netty = {group= "io.ktor",name = "ktor-server-netty", version.ref = "ktorVersion"}
 ktor-server-cio = {group= "io.ktor",name = "ktor-server-cio", version.ref = "ktorVersion"}

@@ -218,7 +218,7 @@
     </form>
 
     <button class="btn btn-restart" id="restartBtn">
-        🔄 Reiniciar Equipamento
+        🔄 Reiniciar Aplicação
     </button>
 
     <div id="message" class="message"></div>
@@ -265,6 +265,8 @@
                 const data = await response.json();
                 showMessage('✓ Configuração aplicada com sucesso!', 'success');
                 console.log('Resposta do servidor:', data);
+                document.getElementById('ip').value = ""
+                document.getElementById('port').value = ""
             } else {
                 throw new Error(`Erro: ${response.status} - ${response.statusText}`);
             }
@@ -278,7 +280,7 @@
     });
 
     restartBtn.addEventListener('click', async () => {
-        if (!confirm('Tem certeza que deseja reiniciar o equipamento?')) {
+        if (!confirm('Tem certeza que deseja reiniciar a aplicação?')) {
             return;
         }
 
@@ -299,7 +301,7 @@
 
             if (response.ok) {
                 const data = await response.json();
-                showMessage('✓ Equipamento reiniciando...', 'success');
+                showMessage('✓ Aplicação reiniciando...', 'success');
                 console.log('Resposta do servidor:', data);
             } else {
                 throw new Error(`Erro: ${response.status} - ${response.statusText}`);
@@ -310,7 +312,7 @@
         } finally {
             restartBtn.disabled = false;
             submitBtn.disabled = false;
-            restartBtn.innerHTML = '🔄 Reiniciar Equipamento';
+            restartBtn.innerHTML = '🔄 Reiniciar Aplicação';
         }
     });
 

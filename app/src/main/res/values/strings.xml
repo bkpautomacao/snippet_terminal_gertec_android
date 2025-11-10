@@ -1,3 +1,5 @@
 <resources>
-    <string name="app_name">TerminalGertec</string>
+    <string name="app_name">BKP Custom</string>
+    <string name="profile_name">bkpreco_lite</string>
+    <string name="ACTION_INSTALL_APP">com.example.ACTION_INSTALL_COMMIT</string>
 </resources>
