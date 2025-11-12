@@ -1,7 +1,9 @@
 package br.com.bkpautomacao.bkpreco_lite
 
+import android.hardware.usb.UsbDevice
 import android.util.Log
 import androidx.lifecycle.ViewModel
+import br.com.bkpautomacao.bkpreco_lite.admin.policy.DevicePolicyManagerHelper
 import br.com.bkpautomacao.bkpreco_lite.http.source.preferences.Preferences
 import com.hoho.android.usbserial.driver.UsbSerialPort
 import com.hoho.android.usbserial.util.SerialInputOutputManager
@@ -16,7 +18,8 @@ import java.util.Locale
 
 class MainViewModel(
   private val usbSerial: UsbSerial,
-  private val prefs: Preferences
+  private val prefs: Preferences,
+  private val devicePolicy: DevicePolicyManagerHelper
 ) : ViewModel(), SerialInputOutputManager.Listener {
 
   private val _product = MutableSharedFlow<Produto?>()
@@ -29,6 +32,9 @@ class MainViewModel(
   val terminalMessages = _linhaProduto.asSharedFlow()
   private lateinit var usbSerialPort: UsbSerialPort
   private lateinit var apiQWChecker: ApiQWChecker
+  private val _exitApp = MutableStateFlow(false)
+  val exitApp = _exitApp.asStateFlow()
+
 
   fun startSerialScanner() {
     try {
@@ -77,6 +83,10 @@ class MainViewModel(
       onMessageReceived = ::handleQuickWayMessage
     )
     apiQWChecker.connect()
+  }
+
+  fun findDevice(devices: MutableCollection<UsbDevice>): UsbDevice {
+    return usbSerial.filterDevice(devices)
   }
 
   private suspend fun handleQuickWayMessage(message: String) {
@@ -136,10 +146,15 @@ class MainViewModel(
   override fun onNewData(data: ByteArray?) {
     if (data != null) {
       val stringData = String(data, StandardCharsets.ISO_8859_1)
-      val newData = removeNonAlphaCharacters("2$stringData")
-      Log.i("MainViewModel", "onNewData: Buscando item: $newData")
-      if (this::apiQWChecker.isInitialized) {
-        apiQWChecker.send(newData)
+      if (stringData.startsWith("k")) {
+        _message.value = "Saindo da aplicação"
+        _exitApp.value = true
+      } else {
+        val newData = removeNonAlphaCharacters("2$stringData")
+        Log.i("MainViewModel", "onNewData: Buscando item: $newData")
+        if (this::apiQWChecker.isInitialized) {
+          apiQWChecker.send(newData)
+        }
       }
     }
   }

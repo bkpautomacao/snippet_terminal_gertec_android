@@ -20,24 +20,28 @@ import androidx.lifecycle.lifecycleScope
 import br.com.bkpautomacao.bkpreco_lite.MainViewModel
 import br.com.bkpautomacao.bkpreco_lite.R
 import br.com.bkpautomacao.bkpreco_lite.UiUtils
+import br.com.bkpautomacao.bkpreco_lite.admin.policy.DevicePolicyManagerHelper
 import br.com.bkpautomacao.bkpreco_lite.http.HttpServerManager
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import java.util.Locale
+import kotlin.system.exitProcess
 
 class MainActivity : AppCompatActivity() {
   private lateinit var tts: TextToSpeech
   private val viewModel by viewModel<MainViewModel>()
   private val ACTION_USB_PERMISSION = "br.com.gabrielmorais.terminalgertec.USB_PERMISSION"
   private val USB_PERMISSION_REQUEST_CODE = 562
+  private val devicePolicy: DevicePolicyManagerHelper by inject()
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_main)
     configureTTS()
     UiUtils.hideSystemUi(window)
-
+    devicePolicy.enableLockTask(this)
     val filter = IntentFilter(ACTION_USB_PERMISSION)
     if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.O) {
       registerReceiver(usbReceiver, filter)
@@ -82,16 +86,17 @@ class MainActivity : AppCompatActivity() {
       Log.i("MainActivity", "requestUsbPermission: ${device.productName}")
     }
 
-    val usbDevices = devices.filter { device ->
-      device.productName?.contains("usb2.0-ser", ignoreCase = true) ?: false
-    }
-
-    if (usbDevices.isEmpty()) {
-      Log.i("MainActivity", "requestUsbPermission: Nenhum scanner usb encontrado")
+    val device = try {
+      viewModel.findDevice(devices)
+    } catch (e: Exception) {
+      Toast.makeText(
+        this,
+        e.message ?: "ocorreu um erro",
+        Toast.LENGTH_SHORT
+      ).show()
       return
     }
 
-    val device = usbDevices[0]
     val permissionIntent = PendingIntent.getBroadcast(
       this,
       USB_PERMISSION_REQUEST_CODE,
@@ -110,7 +115,7 @@ class MainActivity : AppCompatActivity() {
       e.printStackTrace()
     }
 
-    Log.d("MainActivity", "Permissão já concedida ao dispositivo: ${device?.deviceName}")
+    Log.d("MainActivity", "Permissão já concedida ao dispositivo: ${device.deviceName}")
   }
 
   private val usbReceiver = object : BroadcastReceiver() {
@@ -136,13 +141,28 @@ class MainActivity : AppCompatActivity() {
     }
   }
 
+  private fun terminateApp() {
+    Log.d("MainActivity", "Terminating app")
+    finishActivity(0)
+    exitProcess(0)
+  }
+
   private fun handleObserver() {
+
+    viewModel.exitApp.onEach { isExit ->
+      if (isExit) {
+        devicePolicy.stopLockTask(this)
+        terminateApp()
+      }
+    }.launchIn(lifecycleScope)
+
     viewModel.message.onEach { text ->
       if (text != null && text.isNotBlank()) {
         Toast.makeText(this, text, Toast.LENGTH_SHORT)
           .show()
       }
     }.launchIn(lifecycleScope)
+
     viewModel.isConnected.onEach { isConnected ->
       val tvStatus = findViewById<ImageView>(R.id.status)
       if (isConnected) {

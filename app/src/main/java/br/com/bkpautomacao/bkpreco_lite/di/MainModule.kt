@@ -4,6 +4,7 @@ import android.content.Context
 import android.hardware.usb.UsbManager
 import androidx.room.Room
 import br.com.bkpautomacao.bkpreco_lite.UsbSerial
+import br.com.bkpautomacao.bkpreco_lite.admin.policy.DevicePolicyManagerHelper
 import br.com.bkpautomacao.bkpreco_lite.http.source.BkpWayDatabase
 import br.com.bkpautomacao.bkpreco_lite.http.source.preferences.Preferences
 import br.com.bkpautomacao.bkpreco_lite.http.source.repository.AppConfigRepository
@@ -23,9 +24,7 @@ val mainModule = module {
     ).build()
   }
 
-  single {
-    AppConfigRepository(get())
-  }
-
+  single { AppConfigRepository(get()) }
   single { Preferences(get()) }
+  single { DevicePolicyManagerHelper(get()) }
 }

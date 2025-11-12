@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.android)
@@ -12,30 +14,11 @@ android {
     applicationId = "br.com.bkpautomacao.bkpreco_lite"
     minSdk = 26
     targetSdk = 35
-    versionCode = 5
-    versionName = "1.4"
+    versionCode = 6
+    versionName = "1.4.2"
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-//    applicationVariants.all {
-//      val variant = this
-//      variant.outputs.forEach { output ->
-//        val buildType = variant.buildType
-//        val versionNAme = variant.versionName
-//
-//        val filename = "bkpreco_lite_$buildType$versionName"
-//        output.
-//      }
-//    }
-  }
-//        .map { it as com.android.build.gradle.internal.api.BaseVariantImpl }
-//        .filter {
-//          val names = it.name.split("-")
-//          it.name.lowercase().contains(names[0],true) && it.name.lowercase().contains(names[1],true)
-//        }
-//        .forEach { output ->
-//          val outputFileName = "bkpreco_lite${variant.flavorName}_${variant.buildType.name}_${variant.versionName}.apk"
-//          output. = outputFileName
-//        }
 
+  }
 
   packaging {
     resources {
@@ -63,11 +46,18 @@ android {
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
   }
-  kotlinOptions {
-    jvmTarget = "17"
-  }
-}
 
+  kotlin {
+    compilerOptions {
+      jvmTarget = JvmTarget.JVM_17
+    }
+  }
+
+}
+base {
+  archivesName =
+    "${android.defaultConfig.applicationId}-${android.defaultConfig.versionName}-${android.defaultConfig.versionCode}"
+}
 dependencies {
 
   implementation(libs.androidx.core.ktx)
