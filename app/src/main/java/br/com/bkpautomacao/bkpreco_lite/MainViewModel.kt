@@ -137,30 +137,41 @@ class MainViewModel(
 
   override fun onCleared() {
     super.onCleared()
-    apiQWChecker.close()
+    if (this::apiQWChecker.isInitialized) {
+      apiQWChecker.close()
+    }
     if (this::usbSerialPort.isInitialized) {
       usbSerial.closePortConnection(usbSerialPort)
     }
   }
 
+  val barcode = StringBuilder()
   override fun onNewData(data: ByteArray?) {
     if (data != null) {
+      Log.i("MainViewModel", "onNewData: RawDataScanner ${data.toList()}")
       val stringData = String(data, StandardCharsets.ISO_8859_1)
       if (stringData.startsWith("k")) {
         _message.value = "Saindo da aplicação"
         _exitApp.value = true
       } else {
-        val newData = removeNonAlphaCharacters("2$stringData")
-        Log.i("MainViewModel", "onNewData: Buscando item: $newData")
-        if (this::apiQWChecker.isInitialized) {
-          apiQWChecker.send(newData)
+        val newData = removeNonAlphaCharacters(stringData)
+        barcode.append(newData)
+        Log.i("MainViewModel", "onNewData: Newdata $newData")
+        Log.i("MainViewModel", "onNewData: barcode: $barcode")
+        if (barcode.contains("[\\r\\n]+".toRegex())) {
+          val dataFull = "2$barcode"
+          Log.i("MainViewModel", "onNewData: Buscando item: $dataFull")
+          if (this::apiQWChecker.isInitialized) {
+            apiQWChecker.send(dataFull)
+            barcode.clear()
+          }
         }
       }
     }
   }
 
   fun removeNonAlphaCharacters(s: String): String {
-    val regex = "[^a-zA-Z0-9.]".toRegex()
+    val regex = "[^a-zA-Z0-9.\\n\\r]".toRegex()
     return s.replace(regex, "")
   }
 

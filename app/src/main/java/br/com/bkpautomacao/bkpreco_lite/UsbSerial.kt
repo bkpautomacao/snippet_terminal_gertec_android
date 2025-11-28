@@ -31,6 +31,7 @@ class UsbSerial(
   fun filterDevice(deviceList: Collection<UsbDevice>): UsbDevice {
     val patterns = listOf(
       "usb2.0-ser",
+      "FT232R USB UART",
       "handheld barcode scanner",
       "symbol bar code scanner"
     )
