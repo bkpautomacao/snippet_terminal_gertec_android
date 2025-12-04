@@ -2,8 +2,11 @@ package br.com.bkpautomacao.bkpreco_lite
 
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
+import android.util.Log
 import br.com.bkpautomacao.bkpreco_lite.exceptions.UsbConnectionException
 import br.com.bkpautomacao.bkpreco_lite.exceptions.UsbNotFoundException
+import com.hoho.android.usbserial.driver.FtdiSerialDriver
+import com.hoho.android.usbserial.driver.ProbeTable
 import com.hoho.android.usbserial.driver.UsbSerialDriver
 import com.hoho.android.usbserial.driver.UsbSerialPort
 import com.hoho.android.usbserial.driver.UsbSerialProber
@@ -16,11 +19,20 @@ class UsbSerial(
       .getDefaultProber()
       .findAllDrivers(usbManager)
 
-    if (availableDrivers.isEmpty()) {
+    val probeTable = ProbeTable()
+    probeTable.addProduct(0x1504, 0x5889, FtdiSerialDriver::class.java)
+    probeTable.addProduct(0x5e0, 0x1200, FtdiSerialDriver::class.java)
+    val prober = UsbSerialProber(probeTable)
+    val fullList = availableDrivers + prober.findAllDrivers(usbManager)
+    Log.i("UsbSerial", "AvailableDevice: ${fullList.size}")
+    fullList.forEach { driver ->
+      Log.i("UsbSerial", "Dispositivos FullList: ${driver?.device?.deviceName}")
+    }
+    if (fullList.isEmpty()) {
       throw UsbNotFoundException("Nenhum dispositivo usb encontrado")
     }
 
-    val usbDriver = availableDrivers[0]
+    val usbDriver = fullList[0]
     if (usbDriver == null) {
       throw UsbNotFoundException("Nenhum dispositivo usb encontrado")
     }
@@ -33,14 +45,20 @@ class UsbSerial(
       "usb2.0-ser",
       "FT232R USB UART",
       "handheld barcode scanner",
-      "symbol bar code scanner"
+      "symbol",
+      "DataTraveler"
     )
 
     val device = deviceList.firstOrNull { device ->
+      Log.i(
+        "UsbSerial",
+        "Dispositivos: $device | vendor ${device.vendorId} | product ${device.productId}"
+      )
       val name = device.productName ?: return@firstOrNull false
-      patterns.any { pattern -> name.contains(pattern, ignoreCase = true) }
+      patterns.any { pattern -> name.lowercase().contains(pattern, ignoreCase = true) }
     } ?: throw UsbNotFoundException("Nenhum dispositivo autorizado encontrado")
 
+    Log.i("UsbSerial", "Filter Device: ${device.productName}")
     return device
   }
 

@@ -14,10 +14,9 @@ android {
     applicationId = "br.com.bkpautomacao.bkpreco_lite"
     minSdk = 26
     targetSdk = 35
-    versionCode = 7
-    versionName = "1.4.3"
+    versionCode = 10
+    versionName = "1.4.6"
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
   }
 
   packaging {

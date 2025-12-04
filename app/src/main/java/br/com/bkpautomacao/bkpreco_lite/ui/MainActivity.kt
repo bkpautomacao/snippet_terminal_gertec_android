@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
 import android.os.Build
@@ -14,8 +15,8 @@ import android.util.Log
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import br.com.bkpautomacao.bkpreco_lite.MainViewModel
 import br.com.bkpautomacao.bkpreco_lite.R
@@ -104,9 +105,8 @@ class MainActivity : AppCompatActivity() {
       PendingIntent.FLAG_IMMUTABLE
     )
 
-    if (!usbManager.hasPermission(device)) {
+    if (ContextCompat.checkSelfPermission(this, ACTION_USB_PERMISSION) != PERMISSION_GRANTED) {
       usbManager.requestPermission(device, permissionIntent)
-      return
     }
 
     try {
@@ -119,27 +119,26 @@ class MainActivity : AppCompatActivity() {
   }
 
   private val usbReceiver = object : BroadcastReceiver() {
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+
     override fun onReceive(context: Context, intent: Intent) {
-      when (intent.action) {
-        ACTION_USB_PERMISSION -> {
-          val device = intent.getParcelableExtra(
-            UsbManager.EXTRA_DEVICE,
-            UsbDevice::class.java
+      Log.i("MainActivity", "usb_receiver: action type ${intent.action}")
+      if (intent.action == ACTION_USB_PERMISSION) {
+        // Compatível com API < 26
+        @Suppress("DEPRECATION")
+        val device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE) as? UsbDevice
+        val granted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
+
+        if (granted) {
+          Log.d(
+            "MainActivity",
+            "Permissão concedida para o dispositivo: ${device?.deviceName}"
           )
-          if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
-            Log.d(
-              "MainActivity",
-              "Permissão concedida para o dispositivo: ${device?.productName}"
-            )
-            viewModel.startSerialScanner()
-          } else {
-            Log.d("MainActivity", "Permissão negada para o dispositivo USB")
-          }
+          viewModel.startSerialScanner()
         }
       }
     }
   }
+
 
   private fun terminateApp() {
     Log.d("MainActivity", "Terminating app")
